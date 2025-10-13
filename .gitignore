@@ -1,0 +1,16 @@
+# Environment variables
+*.env
+.env.local
+
+# Dependencies
+node_modules/
+.next/
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
