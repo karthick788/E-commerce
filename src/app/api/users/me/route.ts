@@ -63,7 +63,7 @@ export async function PATCH(request: NextRequest) {
       email: email || user.email,
       name: `${firstName || user.firstName} ${lastName || user.lastName}`.trim(),
       image: image ?? user.image,
-      address: address ? { ...user.address?.toObject?.(), ...address } : user.address,
+      address: address ? { ...(user.address || {}), ...address } : user.address,
     };
 
     // Handle password change if provided
@@ -98,7 +98,6 @@ export async function PATCH(request: NextRequest) {
         lastName: updatedUser.lastName,
         email: updatedUser.email,
         name: updatedUser.name,
-        ,
         image: updatedUser.image,
         address: updatedUser.address,
         wishlist: updatedUser.wishlist,

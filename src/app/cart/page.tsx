@@ -1,18 +1,4 @@
-hook.js:608 ./src/app/api/users/me/route.ts
-Error:   × Unexpected token `,`. Expected identifier, string literal, numeric literal or [ for the computed key
-     ╭─[J:\E-commerce\src\app\api\users\me\route.ts:101:1]
-  98 │         lastName: updatedUser.lastName,
-  99 │         email: updatedUser.email,
- 100 │         name: updatedUser.name,
- 101 │         ,
-     ·         ─
- 102 │         image: updatedUser.image,
- 103 │         address: updatedUser.address,
- 104 │         wishlist: updatedUser.wishlist,
-     ╰────
-
-Caused by:
-    Syntax Error'use client';
+'use client';
 
 import { useState } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
@@ -163,8 +149,8 @@ export default function CartPage() {
             </div>
             
             <div className="mt-6 space-y-3">
-              <Button className="w-full" size="lg">
-                Proceed to Checkout
+              <Button className="w-full" size="lg" asChild>
+                <a href="/checkout">Proceed to Checkout</a>
               </Button>
               <Button variant="outline" className="w-full" asChild>
                 <a href="/products">Continue Shopping</a>

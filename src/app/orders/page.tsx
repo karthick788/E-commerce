@@ -1,11 +1,45 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import { toast } from 'react-hot-toast';
+import { FiCheckCircle } from 'react-icons/fi';
 
 export default function OrdersPage() {
+  const searchParams = useSearchParams();
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    const success = searchParams.get('success');
+    const sessionId = searchParams.get('session_id');
+    
+    if (success === 'true') {
+      setShowSuccess(true);
+      if (sessionId) {
+        toast.success('Payment successful! Your order has been placed.');
+      } else {
+        toast.success('Order placed successfully!');
+      }
+      
+      // Hide success message after 5 seconds
+      setTimeout(() => setShowSuccess(false), 5000);
+    }
+  }, [searchParams]);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
+      {showSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+          <FiCheckCircle className="w-6 h-6 text-green-600" />
+          <div>
+            <h3 className="font-semibold text-green-900">Order Placed Successfully!</h3>
+            <p className="text-sm text-green-700">Thank you for your purchase. You will receive a confirmation email shortly.</p>
+          </div>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Orders</h1>
       </div>
