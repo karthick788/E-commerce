@@ -7,7 +7,7 @@
 2. **Cart to Profile Navigation**: Fixed routing flow from cart to profile pages
 3. **TypeScript Errors**: Resolved address handling in user profile updates
 
-### ✨ New Features Added
+### ✨ New Features Added here
 
 #### 1. Product Seeding Script
 Added comprehensive product database with 20+ products across all categories:
