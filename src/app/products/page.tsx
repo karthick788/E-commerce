@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { FiHeart } from 'react-icons/fi';
+import { toast } from 'react-hot-toast';
 import styles from './products.module.css';
 
 type Product = {
@@ -26,8 +28,44 @@ const categoryFallbackImage: Record<Product['category'], string> = {
 export default function ProductsPage() {
   const [category, setCategory] = useState<string>('');
   const [products, setProducts] = useState<Product[]>([]);
+  const [wishlist, setWishlist] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState<boolean>(true);
   const router = useRouter();
+
+  // Load wishlist from localStorage on component mount
+  useEffect(() => {
+    try {
+      const savedWishlist = localStorage.getItem('wishlist');
+      if (savedWishlist) {
+        setWishlist(new Set(JSON.parse(savedWishlist)));
+      }
+    } catch (error) {
+      console.error('Failed to load wishlist', error);
+    }
+  }, []);
+
+  // Save wishlist to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('wishlist', JSON.stringify(Array.from(wishlist)));
+    } catch (error) {
+      console.error('Failed to save wishlist', error);
+    }
+  }, [wishlist]);
+
+  const toggleWishlist = (productId: string, productName: string) => {
+    setWishlist(prev => {
+      const newWishlist = new Set(prev);
+      if (newWishlist.has(productId)) {
+        newWishlist.delete(productId);
+        toast.success(`Removed from wishlist`);
+      } else {
+        newWishlist.add(productId);
+        toast.success(`Added ${productName} to wishlist`);
+      }
+      return newWishlist;
+    });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -134,6 +172,24 @@ export default function ProductsPage() {
           {visible.map((p) => (
             <div key={p._id} className={styles.card}>
               <div className={styles.media}>
+                {/* Wishlist button */}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleWishlist(p._id, p.name);
+                  }}
+                  className={styles.wishlistButton}
+                  aria-label={wishlist.has(p._id) ? 'Remove from wishlist' : 'Add to wishlist'}
+                >
+                  <FiHeart 
+                    className={styles.wishlistIcon} 
+                    style={{
+                      fill: wishlist.has(p._id) ? '#ef4444' : 'none',
+                      stroke: wishlist.has(p._id) ? '#ef4444' : '#9ca3af',
+                      transition: 'all 0.2s ease-in-out',
+                    }} 
+                  />
+                </button>
                 {/* Image fallback */}
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
