@@ -55,11 +55,11 @@ export default function CartPage() {
         <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
         
         <div className="text-center py-12">
-          <FiShoppingCart className="mx-auto h-24 w-24 text-gray-400 mb-4" />
+          <FiShoppingCart className="mx-auto h-24 w-24 mb-4 text-black" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Your cart is empty</h3>
           <p className="text-gray-500 mb-6">Add some products to get started!</p>
           <Button asChild>
-            <a href="/products">Continue Shopping</a>
+            <a href="/products"><p className='text-black'>Continue Shopping</p></a>
           </Button>
         </div>
       </div>
@@ -120,11 +120,11 @@ export default function CartPage() {
         </div>
         
         {/* Order Summary */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 text-black">
           <Card className="p-6 sticky top-6">
             <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
             
-            <div className="space-y-3">
+            <div className="space-y-3 text-black">
               <div className="flex justify-between">
                 <span>Subtotal</span>
                 <span>${subtotal.toFixed(2)}</span>
@@ -150,10 +150,10 @@ export default function CartPage() {
             
             <div className="mt-6 space-y-3">
               <Button className="w-full" size="lg" asChild>
-                <a href="/checkout">Proceed to Checkout</a>
+                <a href="/checkout" className='text-black'>Proceed to Checkout</a>
               </Button>
-              <Button variant="outline" className="w-full" asChild>
-                <a href="/products">Continue Shopping</a>
+              <Button variant="outline" className="w-full " asChild>
+                <a href="/products" className='text-black'>Continue Shopping</a>
               </Button>
             </div>
             
