@@ -148,7 +148,7 @@ export default function ProductsPage() {
   return (
     <div>
       <div className={styles.toolbar}>
-        <h1>Products</h1>
+        <h1 className="text-black">Products</h1>
         <div>
           <label htmlFor="category" style={{ marginRight: 8 }}>Category</label>
           <select
