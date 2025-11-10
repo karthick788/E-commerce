@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import styles from './profile.module.css';
@@ -24,6 +25,7 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile>({
     firstName: '',
@@ -33,6 +35,55 @@ export default function ProfilePage() {
     address: {},
   });
   const [wishlist, setWishlist] = useState<any[]>([]);
+  const [wishlistProducts, setWishlistProducts] = useState<any[]>([]);
+
+  // Load wishlist from localStorage and fetch product details
+  useEffect(() => {
+    const loadWishlist = async () => {
+      try {
+        // Get wishlist IDs from localStorage
+        const savedWishlist = localStorage.getItem('wishlist');
+        if (savedWishlist) {
+          const wishlistIds = JSON.parse(savedWishlist);
+          setWishlist(wishlistIds);
+          
+          // Fetch product details for each wishlist item
+          if (wishlistIds.length > 0) {
+            const products = await Promise.all(
+              wishlistIds.map(async (id: string) => {
+                try {
+                  const response = await fetch(`/api/products/${id}`);
+                  if (response.ok) {
+                    const result = await response.json();
+                    return result.data || result; // Handle both {data: product} and direct product response
+                  }
+                  return null;
+                } catch (error) {
+                  console.error(`Failed to fetch product ${id}:`, error);
+                  return null;
+                }
+              })
+            );
+            setWishlistProducts(products.filter(p => p !== null));
+          } else {
+            setWishlistProducts([]);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load wishlist:', error);
+      }
+    };
+
+    loadWishlist();
+
+    // Listen for wishlist updates from other components
+    const handleWishlistUpdate = (event: any) => {
+      loadWishlist();
+    };
+
+    window.addEventListener('wishlistUpdated', handleWishlistUpdate);
+    return () => window.removeEventListener('wishlistUpdated', handleWishlistUpdate);
+  }, []);
 
   // Load user data on component mount
   useEffect(() => {
@@ -46,8 +97,18 @@ export default function ProfilePage() {
           image: d.image || session?.user?.image || '',
           address: d.address || {},
         });
-        setWishlist(d.wishlist || []);
-      });
+        // Merge backend wishlist with localStorage (localStorage takes priority)
+        const localWishlist = localStorage.getItem('wishlist');
+        if (!localWishlist && d.wishlist && Array.isArray(d.wishlist) && d.wishlist.length > 0) {
+          // Only use backend wishlist if localStorage is empty
+          const backendWishlist = d.wishlist.map((w: any) => w._id || w);
+          localStorage.setItem('wishlist', JSON.stringify(backendWishlist));
+          setWishlist(backendWishlist);
+          // Trigger reload of wishlist products
+          window.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: { wishlist: backendWishlist } }));
+        }
+      })
+      .catch(err => console.error('Failed to load user profile:', err));
   }, [session]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,6 +117,32 @@ export default function ProfilePage() {
       ...prev,
       [name]: value
     }));
+  };
+
+  const handleRemoveFromWishlist = async (productId: string) => {
+    // Remove from state
+    const updatedWishlist = wishlist.filter(id => id !== productId);
+    setWishlist(updatedWishlist);
+    setWishlistProducts(prev => prev.filter(p => p._id !== productId));
+    
+    // Update localStorage
+    localStorage.setItem('wishlist', JSON.stringify(updatedWishlist));
+    
+    // Dispatch event for other components
+    window.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: { wishlist: updatedWishlist } }));
+    
+    // Sync with backend
+    try {
+      await fetch('/api/users/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wishlist: updatedWishlist }),
+      });
+      toast.success('Removed from wishlist');
+    } catch (error) {
+      console.error('Failed to sync wishlist removal:', error);
+      toast.error('Failed to update wishlist');
+    }
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -74,7 +161,7 @@ export default function ProfilePage() {
           email: profile.email,
           image: profile.image,
           address: profile.address,
-          wishlist: wishlist.map(w => w._id ?? w),
+          wishlist: wishlist,
         }),
       });
 
@@ -129,17 +216,23 @@ export default function ProfilePage() {
           <div className={styles.section}>
             <h3>My Wishlist</h3>
             <div className={styles.wishlistGrid} style={{ marginTop: 12 }}>
-              {wishlist.length === 0 ? (
-                <p style={{ color: '#6b7280' }}>No favourites yet.</p>
-              ) : wishlist.map((w) => (
-                <div key={w._id || w} className={styles.wishlistItem}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img className={styles.thumb} src={w?.images?.[0] || '/icon.svg'} alt={w?.name || 'product'} />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600 }}>{w?.name || 'Product'}</div>
-                    <div style={{ fontSize: 12, color: '#6b7280' }}>{w?.category || ''}</div>
+              {wishlistProducts.length === 0 ? (
+                <p style={{ color: '#6b7280' }}>No items in your wishlist yet.</p>
+              ) : wishlistProducts.map((product) => (
+                <div key={product._id} className={styles.wishlistItem}>
+                  <div 
+                    style={{ display: 'flex', flex: 1, gap: 12, cursor: 'pointer' }}
+                    onClick={() => router.push(`/products/${product._id}`)}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img className={styles.thumb} src={product?.images?.[0] || '/icon.svg'} alt={product?.name || 'product'} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600 }}>{product?.name || 'Product'}</div>
+                      <div style={{ fontSize: 12, color: '#6b7280' }}>{product?.category || ''}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginTop: 4 }}>${product?.price?.toFixed(2) || '0.00'}</div>
+                    </div>
                   </div>
-                  <button className={styles.btn} onClick={()=>setWishlist(prev=>prev.filter(p => (p._id ?? p) !== (w._id ?? w)))}>
+                  <button className={styles.btn} onClick={() => handleRemoveFromWishlist(product._id)}>
                     Remove
                   </button>
                 </div>

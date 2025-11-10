@@ -34,37 +34,67 @@ export default function ProductsPage() {
 
   // Load wishlist from localStorage on component mount
   useEffect(() => {
-    try {
-      const savedWishlist = localStorage.getItem('wishlist');
-      if (savedWishlist) {
-        setWishlist(new Set(JSON.parse(savedWishlist)));
+    const loadWishlist = () => {
+      try {
+        const savedWishlist = localStorage.getItem('wishlist');
+        if (savedWishlist) {
+          setWishlist(new Set(JSON.parse(savedWishlist)));
+        }
+      } catch (error) {
+        console.error('Failed to load wishlist', error);
       }
-    } catch (error) {
-      console.error('Failed to load wishlist', error);
-    }
+    };
+
+    loadWishlist();
+
+    // Listen for wishlist updates from other components
+    const handleWishlistUpdate = () => {
+      loadWishlist();
+    };
+
+    window.addEventListener('wishlistUpdated', handleWishlistUpdate);
+    return () => window.removeEventListener('wishlistUpdated', handleWishlistUpdate);
   }, []);
 
-  // Save wishlist to localStorage whenever it changes
-  useEffect(() => {
-    try {
-      localStorage.setItem('wishlist', JSON.stringify(Array.from(wishlist)));
-    } catch (error) {
-      console.error('Failed to save wishlist', error);
-    }
-  }, [wishlist]);
-
   const toggleWishlist = (productId: string, productName: string) => {
-    setWishlist(prev => {
-      const newWishlist = new Set(prev);
-      if (newWishlist.has(productId)) {
-        newWishlist.delete(productId);
-        toast.success(`Removed from wishlist`);
-      } else {
-        newWishlist.add(productId);
+    const isAdding = !wishlist.has(productId);
+    const newWishlist = new Set(wishlist);
+    
+    if (newWishlist.has(productId)) {
+      newWishlist.delete(productId);
+    } else {
+      newWishlist.add(productId);
+    }
+    
+    // Update state
+    setWishlist(newWishlist);
+    
+    // Save to localStorage
+    const wishlistArray = Array.from(newWishlist);
+    try {
+      localStorage.setItem('wishlist', JSON.stringify(wishlistArray));
+    } catch (error) {
+      console.error('Failed to save wishlist to localStorage:', error);
+    }
+    
+    // Sync with backend
+    fetch('/api/users/me', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ wishlist: wishlistArray }),
+    }).catch(err => console.error('Failed to sync wishlist with backend:', err));
+    
+    // Show toast notification
+    setTimeout(() => {
+      if (isAdding) {
         toast.success(`Added ${productName} to wishlist`);
+      } else {
+        toast.success(`Removed from wishlist`);
       }
-      return newWishlist;
-    });
+    }, 0);
+    
+    // Dispatch custom event for other components to listen
+    window.dispatchEvent(new CustomEvent('wishlistUpdated', { detail: { wishlist: wishlistArray } }));
   };
 
   useEffect(() => {
@@ -170,7 +200,12 @@ export default function ProductsPage() {
       ) : (
         <div className={styles.grid}>
           {visible.map((p) => (
-            <div key={p._id} className={styles.card}>
+            <div 
+              key={p._id} 
+              className={styles.card}
+              onClick={() => router.push(`/products/${p._id}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className={styles.media}>
                 {/* Wishlist button */}
                 <button 
@@ -208,7 +243,15 @@ export default function ProductsPage() {
                     <span style={{ fontSize: 12, color: '#16a34a' }}>-{p.discount}%</span>
                   ) : null}
                 </div>
-                <button className={styles.buyBtn} onClick={() => handleBuyNow(p)}>Buy Now</button>
+                <button 
+                  className={styles.buyBtn} 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleBuyNow(p);
+                  }}
+                >
+                  Buy Now
+                </button>
               </div>
             </div>
           ))}
